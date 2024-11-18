@@ -4,35 +4,67 @@ using UnityEngine;
 
 public class Pathfinder : MonoBehaviour
 {
-    [SerializeField] WaveConfigSO waveConfig;
+    EnemySpawner enemySpawner;
+    WaveConfigSO waveConfig;
     List<Transform> waypoints;
     int waypointIndex = 0;
+
+    void Awake()
+    {
+        // Ensure the enemySpawner is correctly found and referenced.
+        enemySpawner = FindObjectOfType<EnemySpawner>();
+        if (enemySpawner == null)
+        {
+            Debug.LogError("EnemySpawner not found in the scene.");
+        }
+    }
+
     void Start()
     {
-        waypoints = waveConfig.GetWaypoints();
-        transform.position = waypoints[waypointIndex].position;
+        waveConfig = enemySpawner?.GetCurrentWave();
+        if (waveConfig != null)
+        {
+            waypoints = waveConfig.GetWaypoints();
+            if (waypoints != null && waypoints.Count > 0)
+            {
+                transform.position = waypoints[waypointIndex].position;
+            }
+            else
+            {
+                Debug.LogError("Waypoints not set up correctly.");
+            }
+        }
+        else
+        {
+            Debug.LogError("Wave configuration is missing.");
+        }
     }
 
     void Update()
     {
-        FollowPath();
+        if (waypoints != null && waypoints.Count > 0)
+        {
+            FollowPath();
+        }
     }
 
     void FollowPath()
     {
-        if(waypointIndex < waypoints.Count)
+        if (waypointIndex < waypoints.Count)
         {
             Vector3 targetPosition = waypoints[waypointIndex].position;
             float delta = waveConfig.GetMoveSpeed() * Time.deltaTime;
             transform.position = Vector2.MoveTowards(transform.position, targetPosition, delta);
-            if(transform.position == targetPosition)
+
+            if (Vector2.Distance(transform.position, targetPosition) < 0.01f)
             {
                 waypointIndex++;
             }
-            else
-            {
-                Destroy(gameObject);
-            }
+        }
+        else
+        {
+            // Safely destroy the object after reaching the final waypoint
+            Destroy(gameObject);
         }
     }
 }
